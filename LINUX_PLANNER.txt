@@ -1,0 +1,59 @@
+#!/bin/bash
+
+TASK_FILE="$HOME/daily_tasks.txt"
+
+# Function to add a task
+add_task() {
+    echo "Enter task description:"
+    read description
+    echo "Enter time for reminder (24-hour format, e.g., 14:30):"
+    read time
+    echo "$time - $description" >> "$TASK_FILE"
+    echo "Task added: $time - $description"
+}
+
+# Function to view tasks
+view_tasks() {
+    echo "Here are your tasks for today:"
+    cat "$TASK_FILE"
+}
+
+# Function to set up reminders using cron
+set_reminders() {
+    echo "Setting up reminders..."
+    # Clear any existing cron jobs for this user related to the reminders
+    crontab -l | grep -v "$TASK_FILE" | crontab -
+    
+    # Read each task and set a cron job for it
+    while IFS= read -r line; do
+        time=$(echo "$line" | cut -d' ' -f1)
+        description=$(echo "$line" | cut -d' ' -f3-)
+        
+        # Convert time to hours and minutes
+        hour=${time%:*}
+        minute=${time#*:}
+        
+        # Add a cron job to display the reminder
+        (crontab -l 2>/dev/null; echo "$minute $hour * * * notify-send 'Reminder' '$description'") | crontab -
+    done < "$TASK_FILE"
+    
+    echo "Reminders set successfully."
+}
+
+# Main menu
+while true; do
+    echo "Choose an option:"
+    echo "1. Add Task"
+    echo "2. View Tasks"
+    echo "3. Set Reminders"
+    echo "4. Exit"
+    read choice
+
+    case $choice in
+        1) add_task ;;
+        2) view_tasks ;;
+        3) set_reminders ;;
+        4) exit ;;
+        *) echo "Invalid option. Please try again." ;;
+    esac
+done
